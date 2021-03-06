@@ -14,8 +14,7 @@ $piholeFTLConf = piholeFTLConfig();
 
 // Handling of PHP internal errors
 $last_error = error_get_last();
-if(isset($last_error) && ($last_error["type"] === E_WARNING || $last_error["type"] === E_ERROR))
-{
+if (isset($last_error) && ($last_error["type"] === E_WARNING || $last_error["type"] === E_ERROR)) {
 	$error .= "There was a problem applying your settings.<br>Debugging information:<br>PHP error (".htmlspecialchars($last_error["type"])."): ".htmlspecialchars($last_error["message"])." in ".htmlspecialchars($last_error["file"]).":".htmlspecialchars($last_error["line"]);
 }
 
@@ -71,11 +70,7 @@ if (isset($setupVars["PIHOLE_INTERFACE"])) {
 } else {
     $piHoleInterface = "unknown";
 }
-if (isset($setupVars["IPV4_ADDRESS"])) {
-    $piHoleIPv4 = $setupVars["IPV4_ADDRESS"];
-} else {
-    $piHoleIPv4 = "unknown";
-}
+$piHoleIPv4 = $setupVars["IPV4_ADDRESS"] ?? "unknown";
 $IPv6connectivity = false;
 if (isset($setupVars["IPV6_ADDRESS"])) {
     $piHoleIPv6 = $setupVars["IPV6_ADDRESS"];
@@ -106,7 +101,7 @@ $DNSactive = [];
 $i = 1;
 while (isset($setupVars["PIHOLE_DNS_" . $i])) {
     if (isinserverlist($setupVars["PIHOLE_DNS_" . $i])) {
-        array_push($DNSactive, $setupVars["PIHOLE_DNS_" . $i]);
+        $DNSactive[] = $setupVars["PIHOLE_DNS_" . $i];
     } elseif (strpos($setupVars["PIHOLE_DNS_" . $i], ".") !== false) {
         if (!isset($custom1)) {
             $custom1 = $setupVars["PIHOLE_DNS_" . $i];
@@ -143,12 +138,8 @@ if (isset($setupVars["DNS_BOGUS_PRIV"])) {
     $DNSbogusPriv = true;
 }
 
-if (isset($setupVars["DNSSEC"])) {
-    if ($setupVars["DNSSEC"]) {
-        $DNSSEC = true;
-    } else {
-        $DNSSEC = false;
-    }
+if (isset($setupVars["DNSSEC"]) && $setupVars["DNSSEC"]) {
+    $DNSSEC = true;
 } else {
     $DNSSEC = false;
 }
@@ -203,18 +194,10 @@ if (isset($setupVars["API_EXCLUDE_CLIENTS"])) {
 }
 
 // Exluded clients
-if (isset($setupVars["API_QUERY_LOG_SHOW"])) {
-    $queryLog = $setupVars["API_QUERY_LOG_SHOW"];
-} else {
-    $queryLog = "all";
-}
+$queryLog = $setupVars["API_QUERY_LOG_SHOW"] ?? "all";
 
 // Privacy Mode
-if (isset($setupVars["API_PRIVACY_MODE"])) {
-    $privacyMode = $setupVars["API_PRIVACY_MODE"];
-} else {
-    $privacyMode = false;
-}
+$privacyMode = $setupVars["API_PRIVACY_MODE"] ?? false;
 
 ?>
 
@@ -465,21 +448,9 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], array("sysadmin", "adlists", "
                             $DHCP = false;
                         }
                         // Read setings from config file
-                        if (isset($setupVars["DHCP_START"])) {
-                            $DHCPstart = $setupVars["DHCP_START"];
-                        } else {
-                            $DHCPstart = "";
-                        }
-                        if (isset($setupVars["DHCP_END"])) {
-                            $DHCPend = $setupVars["DHCP_END"];
-                        } else {
-                            $DHCPend = "";
-                        }
-                        if (isset($setupVars["DHCP_ROUTER"])) {
-                            $DHCProuter = $setupVars["DHCP_ROUTER"];
-                        } else {
-                            $DHCProuter = "";
-                        }
+                        $DHCPstart = $setupVars["DHCP_START"] ?? "";
+                        $DHCPend = $setupVars["DHCP_END"] ?? "";
+                        $DHCProuter = $setupVars["DHCP_ROUTER"] ?? "";
 
                         // This setting has been added later, we have to check if it exists
                         if (isset($setupVars["DHCP_LEASETIME"])) {
@@ -491,16 +462,8 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], array("sysadmin", "adlists", "
                         } else {
                             $DHCPleasetime = 24;
                         }
-                        if (isset($setupVars["DHCP_IPv6"])) {
-                            $DHCPIPv6 = $setupVars["DHCP_IPv6"];
-                        } else {
-                            $DHCPIPv6 = false;
-                        }
-                        if (isset($setupVars["DHCP_rapid_commit"])) {
-                            $DHCP_rapid_commit = $setupVars["DHCP_rapid_commit"];
-                        } else {
-                            $DHCP_rapid_commit = false;
-                        }
+                        $DHCPIPv6 = $setupVars["DHCP_IPv6"] ?? false;
+                        $DHCP_rapid_commit = $setupVars["DHCP_rapid_commit"] ?? false;
 
                     } else {
                         $DHCP = false;
@@ -519,11 +482,7 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], array("sysadmin", "adlists", "
                         $DHCPIPv6 = false;
                         $DHCP_rapid_commit = false;
                     }
-                    if (isset($setupVars["PIHOLE_DOMAIN"])) {
-                        $piHoleDomain = $setupVars["PIHOLE_DOMAIN"];
-                    } else {
-                        $piHoleDomain = "lan";
-                    }
+                    $piHoleDomain = $setupVars["PIHOLE_DOMAIN"] ?? "lan";
                     ?>
                     <form role="form" method="post">
                         <div class="row">
@@ -635,21 +594,24 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], array("sysadmin", "adlists", "
                                 // Read leases file
                                 $leasesfile = true;
                                 $dhcpleases = @fopen('/etc/pihole/dhcp.leases', 'r');
-                                if (!is_resource($dhcpleases))
+                                if (!is_resource($dhcpleases)) {
                                     $leasesfile = false;
+                                }
 
                                 function convertseconds($argument)
                                 {
                                     $seconds = round($argument);
                                     if ($seconds < 60) {
                                         return sprintf('%ds', $seconds);
-                                    } elseif ($seconds < 3600) {
-                                        return sprintf('%dm %ds', ($seconds / 60), ($seconds % 60));
-                                    } elseif ($seconds < 86400) {
-                                        return sprintf('%dh %dm %ds', ($seconds / 3600 % 24), ($seconds / 60 % 60), ($seconds % 60));
-                                    } else {
-                                        return sprintf('%dd %dh %dm %ds', ($seconds / 86400), ($seconds / 3600 % 24), ($seconds / 60 % 60), ($seconds % 60));
                                     }
+                                    if ($seconds < 3600) {
+                                        return sprintf('%dm %ds', ($seconds / 60), ($seconds % 60));
+                                    }
+                                    if ($seconds < 86400) {
+                                        return sprintf('%dh %dm %ds', ($seconds / 3600 % 24), ($seconds / 60 % 60), ($seconds % 60));
+                                    }
+
+                                    return sprintf('%dd %dh %dm %ds', ($seconds / 86400), ($seconds / 3600 % 24), ($seconds / 60 % 60), ($seconds % 60));
                                 }
 
                                 while (!feof($dhcpleases) && $leasesfile) {
@@ -658,11 +620,11 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], array("sysadmin", "adlists", "
                                         $counter = intval($line[0]);
                                         if ($counter == 0) {
                                             $time = "Infinite";
-                                        } elseif ($counter <= 315360000) // 10 years in seconds
-                                        {
+                                        } elseif ($counter <= 315360000) {
+                                            // 10 years in seconds
                                             $time = convertseconds($counter);
-                                        } else // Assume time stamp
-                                        {
+                                        } else {
+                                            // Assume time stamp
                                             $time = convertseconds($counter - time());
                                         }
 
@@ -684,7 +646,7 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], array("sysadmin", "adlists", "
                                             $clid = "<i>unknown</i>";
                                         }
 
-                                        array_push($dhcp_leases, ["TIME" => $time, "hwaddr" => strtoupper($line[1]), "IP" => $line[2], "host" => $host, "clid" => $clid, "type" => $type]);
+                                        $dhcp_leases[] = ["TIME" => $time, "hwaddr" => strtoupper($line[1]), "IP" => $line[2], "host" => $host, "clid" => $clid, "type" => $type];
                                     }
                                 }
                             }

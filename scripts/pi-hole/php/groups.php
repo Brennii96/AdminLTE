@@ -36,7 +36,7 @@ function JSON_error($message = null)
     header('Content-type: application/json');
     $response = array('success' => false, 'message' => $message);
     if (isset($_POST['action'])) {
-        array_push($response, array('action' => $_POST['action']));
+        $response[] = array('action' => $_POST['action']);
     }
     echo json_encode($response);
 }
@@ -47,7 +47,7 @@ if ($_POST['action'] == 'get_groups') {
         $query = $db->query('SELECT * FROM "group";');
         $data = array();
         while (($res = $query->fetchArray(SQLITE3_ASSOC)) !== false) {
-            array_push($data, $res);
+            $data[] = $res;
         }
 
         header('Content-type: application/json');
@@ -78,7 +78,7 @@ if ($_POST['action'] == 'get_groups') {
 
         foreach ($names as $name) {
             // Silently skip this entry when it is empty or not a string (e.g. NULL)
-            if(!is_string($name) || strlen($name) == 0) {
+            if (!is_string($name) || strlen($name) == 0) {
                 continue;
             }
 
@@ -123,6 +123,7 @@ if ($_POST['action'] == 'get_groups') {
             // Store NULL in database for empty descriptions
             $desc = null;
         }
+
         if (!$stmt->bindValue(':desc', $desc, SQLITE3_TEXT)) {
             throw new Exception('While binding desc: ' . $db->lastErrorMsg());
         }
@@ -145,7 +146,7 @@ if ($_POST['action'] == 'get_groups') {
     try {
         $table_name = ['domainlist_by_group', 'client_by_group', 'adlist_by_group', 'group'];
         $table_keys = ['group_id', 'group_id', 'group_id', 'id'];
-        for ($i = 0; $i < count($table_name); $i++) {
+        for ($i = 0, $iMax = count($table_name); $i < $iMax; $i++) {
             $table = $table_name[$i];
             $key = $table_keys[$i];
 
@@ -209,11 +210,11 @@ if ($_POST['action'] == 'get_groups') {
 
             $groups = array();
             while ($gres = $group_query->fetchArray(SQLITE3_ASSOC)) {
-                array_push($groups, $gres['group_id']);
+                $groups[] = $gres['group_id'];
             }
             $group_query->finalize();
             $res['groups'] = $groups;
-            array_push($data, $res);
+            $data[] = $res;
         }
 
         header('Content-type: application/json');
@@ -242,37 +243,42 @@ if ($_POST['action'] == 'get_groups') {
             $addresses = [];
             $names = [];
             while ($res_ips = $query_ips->fetchArray(SQLITE3_ASSOC)) {
-                array_push($addresses, utf8_encode($res_ips["ip"]));
-                if($res_ips["name"] !== null)
-                    array_push($names,utf8_encode($res_ips["name"]));
+                $addresses[] = utf8_encode($res_ips["ip"]);
+                if ($res_ips["name"] !== null) {
+                    $names[] = utf8_encode($res_ips["name"]);
+                }
             }
             $query_ips->finalize();
 
             // Prepare extra information
             $extrainfo = "";
             // Add list of associated host names to info string (if available)
-            if(count($names) === 1)
-                $extrainfo .= "hostname: ".$names[0];
-            else if(count($names) > 0)
-                $extrainfo .= "hostnames: ".implode(", ", $names);
+            if (count($names) === 1) {
+                $extrainfo .= "hostname: " . $names[0];
+            } elseif (count($names) > 0) {
+                $extrainfo .= "hostnames: " . implode(", ", $names);
+            }
 
             // Add device vendor to info string (if available)
             if (strlen($res["macVendor"]) > 0) {
-                if (count($names) > 0)
+                if (count($names) > 0) {
                     $extrainfo .= "; ";
+                }
                 $extrainfo .= "vendor: ".htmlspecialchars($res["macVendor"]);
             }
 
             // Add list of associated host names to info string (if available and if this is not a mock device)
             if (stripos($res["hwaddr"], "ip-") === FALSE) {
 
-                if ((count($names) > 0 || strlen($res["macVendor"]) > 0) && count($addresses) > 0)
+                if (count($addresses) > 0 && (count($names) > 0 || strlen($res["macVendor"]) > 0)) {
                     $extrainfo .= "; ";
+                }
 
-                if(count($addresses) === 1)
-                    $extrainfo .= "address: ".$addresses[0];
-                else if(count($addresses) > 0)
-                    $extrainfo .= "addresses: ".implode(", ", $addresses);
+                if (count($addresses) === 1) {
+                    $extrainfo .= "address: " . $addresses[0];
+                } elseif (count($addresses) > 0) {
+                    $extrainfo .= "addresses: " . implode(", ", $addresses);
+                }
             }
 
             $ips[strtoupper($res['hwaddr'])] = $extrainfo;
@@ -315,11 +321,9 @@ if ($_POST['action'] == 'get_groups') {
             if(!is_string($ip) || strlen($ip) == 0) {
                 continue;
             }
-
             if (!$stmt->bindValue(':ip', $ip, SQLITE3_TEXT)) {
                 throw new Exception('While binding ip: ' . $db->lastErrorMsg());
             }
-
             $comment = html_entity_decode($_POST['comment']);
             if (strlen($comment) === 0) {
                     // Store NULL in database for empty comments
@@ -329,7 +333,6 @@ if ($_POST['action'] == 'get_groups') {
                 throw new Exception('While binding comment: <strong>' . $db->lastErrorMsg() . '</strong><br>'.
                 'Added ' . $added . " out of ". $total . " clients");
             }
-
             if (!$stmt->execute()) {
                 throw new Exception('While executing: <strong>' . $db->lastErrorMsg() . '</strong><br>'.
                 'Added ' . $added . " out of ". $total . " clients");
@@ -354,51 +357,40 @@ if ($_POST['action'] == 'get_groups') {
 
         $comment = html_entity_decode($_POST['comment']);
         if (strlen($comment) === 0) {
-                // Store NULL in database for empty comments
-                $comment = null;
+            // Store NULL in database for empty comments
+            $comment = null;
         }
         if (!$stmt->bindValue(':comment', $comment, SQLITE3_TEXT)) {
             throw new Exception('While binding comment: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing: ' . $db->lastErrorMsg());
         }
-
         $stmt = $db->prepare('DELETE FROM client_by_group WHERE client_id = :id');
         if (!$stmt) {
             throw new Exception('While preparing DELETE statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing DELETE statement: ' . $db->lastErrorMsg());
         }
-
-        $groups = array();
-        if(isset($_POST['groups']))
-            $groups = $_POST['groups'];
+        $groups = $_POST['groups'] ?? array();
         foreach ($groups as $gid) {
             $stmt = $db->prepare('INSERT INTO client_by_group (client_id,group_id) VALUES(:id,:gid);');
             if (!$stmt) {
                 throw new Exception('While preparing INSERT INTO statement: ' . $db->lastErrorMsg());
             }
-
             if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
                 throw new Exception('While binding id: ' . $db->lastErrorMsg());
             }
-
             if (!$stmt->bindValue(':gid', intval($gid), SQLITE3_INTEGER)) {
                 throw new Exception('While binding gid: ' . $db->lastErrorMsg());
             }
-
             if (!$stmt->execute()) {
                 throw new Exception('While executing INSERT INTO statement: ' . $db->lastErrorMsg());
             }
@@ -421,24 +413,19 @@ if ($_POST['action'] == 'get_groups') {
         if (!$stmt) {
             throw new Exception('While preparing client_by_group statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id to client_by_group statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing client_by_group statement: ' . $db->lastErrorMsg());
         }
-
         $stmt = $db->prepare('DELETE FROM client WHERE id=:id');
         if (!$stmt) {
             throw new Exception('While preparing client statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id to client statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing client statement: ' . $db->lastErrorMsg());
         }
@@ -455,11 +442,11 @@ if ($_POST['action'] == 'get_groups') {
     // List all available groups
     try {
         $limit = "";
-        if (isset($_POST["showtype"]) && $_POST["showtype"] === "white"){
+        if (isset($_POST["showtype"]) && $_POST["showtype"] === "white") {
             $limit = " WHERE type = 0 OR type = 2";
-        } elseif (isset($_POST["showtype"]) && $_POST["showtype"] === "black"){
+        } elseif (isset($_POST["showtype"]) && $_POST["showtype"] === "black") {
             $limit = " WHERE type = 1 OR type = 3";
-        } elseif (isset($_POST["type"]) && is_numeric($_POST["type"])){
+        } elseif (isset($_POST["type"]) && is_numeric($_POST["type"])) {
             $limit = " WHERE type = " . $_POST["type"];
         }
         $query = $db->query('SELECT * FROM domainlist'.$limit);
@@ -476,12 +463,11 @@ if ($_POST['action'] == 'get_groups') {
 
             $groups = array();
             while ($gres = $group_query->fetchArray(SQLITE3_ASSOC)) {
-                array_push($groups, $gres['group_id']);
+                $groups[] = $gres['group_id'];
             }
             $res['groups'] = $groups;
-            if (extension_loaded("intl") &&
-                ($res['type'] === ListType::whitelist ||
-                 $res['type'] === ListType::blacklist) ) {
+            if (($res['type'] === ListType::whitelist || $res['type'] === ListType::blacklist)
+                && extension_loaded("intl")) {
 
                 // Try to convert possible IDNA domain to Unicode, we try the UTS #46 standard first
                 // as this is the new default, see https://sourceforge.net/p/icu/mailman/message/32980778/
@@ -557,9 +543,9 @@ if ($_POST['action'] == 'get_groups') {
 
         if (isset($_POST['type'])) {
             $type = intval($_POST['type']);
-        } else if (isset($_POST['list']) && $_POST['list'] === "white") {
+        } elseif (isset($_POST['list']) && $_POST['list'] === "white") {
             $type = ListType::whitelist;
-        } else if (isset($_POST['list']) && $_POST['list'] === "black") {
+        } elseif (isset($_POST['list']) && $_POST['list'] === "black") {
             $type = ListType::blacklist;
         }
 
@@ -600,25 +586,23 @@ if ($_POST['action'] == 'get_groups') {
                 }
             }
 
-            if(isset($_POST['type']) && strlen($_POST['type']) === 2 && $_POST['type'][1] === 'W')
-            {
+            if(isset($_POST['type']) && strlen($_POST['type']) === 2 && $_POST['type'][1] === 'W') {
                 // Apply wildcard-style formatting
                 $domain = "(\\.|^)".str_replace(".","\\.",$domain)."$";
             }
 
-            if($type === ListType::whitelist || $type === ListType::blacklist)
-            {
+            if ($type === ListType::whitelist || $type === ListType::blacklist) {
                 // If adding to the exact lists, we convert the domain lower case and check whether it is valid
                 $domain = strtolower($domain);
-                if(filter_var($domain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false)
-                {
+                if (filter_var($domain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false) {
                     // This is the case when idn_to_ascii() modified the string
-                    if($input !== $domain && strlen($domain) > 0)
+                    if ($input !== $domain && strlen($domain) > 0) {
                         $errormsg = 'Domain ' . htmlentities($input) . ' (converted to "' . htmlentities(utf8_encode($domain)) . '") is not a valid domain.';
-                    elseif($input !== $domain)
+                    } elseif ($input !== $domain) {
                         $errormsg = 'Domain ' . htmlentities($input) . ' is not a valid domain.';
-                    else
+                    } else {
                         $errormsg = 'Domain ' . htmlentities(utf8_encode($domain)) . ' is not a valid domain.';
+                    }
                     throw new Exception($errormsg . '<br>Added ' . $added . " out of ". $total . " domains");
                 }
             }
@@ -629,7 +613,7 @@ if ($_POST['action'] == 'get_groups') {
             // just throw an error at the user to tell them to change this
             // domain manually. This ensures user's will really get what they
             // want from us.
-            if($_POST['action'] == 'replace_domain') {
+            if ($_POST['action'] == 'replace_domain') {
                 if (!$check_stmt->bindValue(':domain', $domain, SQLITE3_TEXT)) {
                     throw new Exception('While binding domain to check: <strong>' . $db->lastErrorMsg() . '</strong><br>'.
                     'Added ' . $added . " out of ". $total . " domains");
@@ -643,7 +627,7 @@ if ($_POST['action'] == 'get_groups') {
 
                 // Check return value of CHECK query (0 = only default group, 1 = special group assignments)
                 $only_default_group = (($check_result->fetchArray(SQLITE3_NUM)[0]) == 0) ? true : false;
-                if(!$only_default_group) {
+                if (!$only_default_group) {
                     throw new Exception('Domain ' . $domain . ' is configured with special group settings.<br>'.
                     'Please modify the domain on the respective group management pages.');
                 }
@@ -658,7 +642,6 @@ if ($_POST['action'] == 'get_groups') {
                     'Added ' . $added . " out of ". $total . " domains");
                 }
             }
-
 
             if (!$insert_stmt->bindValue(':domain', $domain, SQLITE3_TEXT) ||
                 !$update_stmt->bindValue(':domain', $domain, SQLITE3_TEXT)) {
@@ -690,18 +673,16 @@ if ($_POST['action'] == 'get_groups') {
 
         $after = intval($db->querySingle("SELECT COUNT(*) FROM domainlist;"));
         $difference = $after - $before;
-        if($total === 1) {
-            if($difference !== 1) {
-                    $msg = "Not adding ". htmlentities(utf8_encode($domain)) . " as it is already on the list";
+        if ($total === 1) {
+            if ($difference !== 1) {
+                $msg = "Not adding ". htmlentities(utf8_encode($domain)) . " as it is already on the list";
             } else {
-                    $msg = "Added " . htmlentities(utf8_encode($domain));
+                $msg = "Added " . htmlentities(utf8_encode($domain));
             }
+        } elseif ($difference !== $total) {
+            $msg = "Added " . ($after-$before) . " out of ". $total . " domains (skipped duplicates)";
         } else {
-            if($difference !== $total) {
-                    $msg = "Added " . ($after-$before) . " out of ". $total . " domains (skipped duplicates)";
-            } else {
-                    $msg = "Added " . $total . " domains";
-            }
+            $msg = "Added " . $total . " domains";
         }
         $reload = true;
         JSON_success($msg);
@@ -720,7 +701,7 @@ if ($_POST['action'] == 'get_groups') {
 
         $status = intval($_POST['status']);
         if ($status !== 0) {
-                $status = 1;
+            $status = 1;
         }
 
         if (!$stmt->bindValue(':enabled', $status, SQLITE3_INTEGER)) {
@@ -729,55 +710,43 @@ if ($_POST['action'] == 'get_groups') {
 
         $comment = html_entity_decode($_POST['comment']);
         if (strlen($comment) === 0) {
-                // Store NULL in database for empty comments
-                $comment = null;
+            // Store NULL in database for empty comments
+            $comment = null;
         }
         if (!$stmt->bindValue(':comment', $comment, SQLITE3_TEXT)) {
             throw new Exception('While binding comment: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':type', intval($_POST['type']), SQLITE3_INTEGER)) {
             throw new Exception('While binding type: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing: ' . $db->lastErrorMsg());
         }
-
         $stmt = $db->prepare('DELETE FROM domainlist_by_group WHERE domainlist_id = :id');
         if (!$stmt) {
             throw new Exception('While preparing DELETE statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing DELETE statement: ' . $db->lastErrorMsg());
         }
-
-        $groups = array();
-        if(isset($_POST['groups']))
-            $groups = $_POST['groups'];
+        $groups = $_POST['groups'] ?? array();
         foreach ($groups as $gid) {
             $stmt = $db->prepare('INSERT INTO domainlist_by_group (domainlist_id,group_id) VALUES(:id,:gid);');
             if (!$stmt) {
                 throw new Exception('While preparing INSERT INTO statement: ' . $db->lastErrorMsg());
             }
-
             if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
                 throw new Exception('While binding id: ' . $db->lastErrorMsg());
             }
-
             if (!$stmt->bindValue(':gid', intval($gid), SQLITE3_INTEGER)) {
                 throw new Exception('While binding gid: ' . $db->lastErrorMsg());
             }
-
             if (!$stmt->execute()) {
                 throw new Exception('While executing INSERT INTO statement: ' . $db->lastErrorMsg());
             }
@@ -801,29 +770,23 @@ if ($_POST['action'] == 'get_groups') {
         if (!$stmt) {
             throw new Exception('While preparing domainlist_by_group statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id to domainlist_by_group statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing domainlist_by_group statement: ' . $db->lastErrorMsg());
         }
-
         $stmt = $db->prepare('DELETE FROM domainlist WHERE id=:id');
         if (!$stmt) {
             throw new Exception('While preparing domainlist statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id to domainlist statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing domainlist statement: ' . $db->lastErrorMsg());
         }
-
-        if(!$db->query('COMMIT;')) {
+        if (!$db->query('COMMIT;')) {
             throw new Exception('While commiting changes to the database: ' . $db->lastErrorMsg());
         }
 
@@ -841,36 +804,28 @@ if ($_POST['action'] == 'get_groups') {
         if (!$stmt) {
             throw new Exception('While preparing domainlist_by_group statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':domain', $_POST['domain'], SQLITE3_TEXT)) {
             throw new Exception('While binding domain to domainlist_by_group statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':type', intval($_POST['type']), SQLITE3_INTEGER)) {
             throw new Exception('While binding type to domainlist_by_group statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing domainlist_by_group statement: ' . $db->lastErrorMsg());
         }
-
         $stmt = $db->prepare('DELETE FROM domainlist WHERE domain=:domain AND type=:type');
         if (!$stmt) {
             throw new Exception('While preparing domainlist statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':domain', $_POST['domain'], SQLITE3_TEXT)) {
             throw new Exception('While binding domain to domainlist statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':type', intval($_POST['type']), SQLITE3_INTEGER)) {
             throw new Exception('While binding type to domainlist statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing domainlist statement: ' . $db->lastErrorMsg());
         }
-
         if(!$db->query('COMMIT;')) {
             throw new Exception('While commiting changes to the database: ' . $db->lastErrorMsg());
         }
@@ -897,10 +852,10 @@ if ($_POST['action'] == 'get_groups') {
 
             $groups = array();
             while ($gres = $group_query->fetchArray(SQLITE3_ASSOC)) {
-                array_push($groups, $gres['group_id']);
+                $groups[] = $gres['group_id'];
             }
             $res['groups'] = $groups;
-            array_push($data, $res);
+            $data[] = $res;
         }
 
         header('Content-type: application/json');
@@ -941,7 +896,7 @@ if ($_POST['action'] == 'get_groups') {
            // $1 is optional schema, $2 is userinfo
             $check_address = preg_replace("|([^:/]*://)?([^/]+)@|", "$1$2", $address, 1);
 
-            if(preg_match("/[^a-zA-Z0-9:\/?&%=~._()-;]/", $check_address) !== 0) {
+            if (preg_match("/[^a-zA-Z0-9:\/?&%=~._()-;]/", $check_address) !== 0) {
                 throw new Exception('<strong>Invalid adlist URL ' . htmlentities($address) . '</strong><br>'.
                 'Added ' . $added . " out of ". $total . " adlists");
             }
@@ -958,7 +913,7 @@ if ($_POST['action'] == 'get_groups') {
             $added++;
         }
 
-        if(!$db->query('COMMIT;')) {
+        if (!$db->query('COMMIT;')) {
             throw new Exception('While commiting changes to the database: ' . $db->lastErrorMsg());
         }
 
@@ -979,66 +934,53 @@ if ($_POST['action'] == 'get_groups') {
 
         $status = intval($_POST['status']);
         if ($status !== 0) {
-                $status = 1;
+            $status = 1;
         }
-
         if (!$stmt->bindValue(':enabled', $status, SQLITE3_INTEGER)) {
             throw new Exception('While binding enabled: ' . $db->lastErrorMsg());
         }
-
         $comment = html_entity_decode($_POST['comment']);
         if (strlen($comment) === 0) {
-                // Store NULL in database for empty comments
-                $comment = null;
+            // Store NULL in database for empty comments
+            $comment = null;
         }
         if (!$stmt->bindValue(':comment', $comment, SQLITE3_TEXT)) {
             throw new Exception('While binding comment: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing: ' . $db->lastErrorMsg());
         }
-
         $stmt = $db->prepare('DELETE FROM adlist_by_group WHERE adlist_id = :id');
         if (!$stmt) {
             throw new Exception('While preparing DELETE statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing DELETE statement: ' . $db->lastErrorMsg());
         }
 
-        $groups = array();
-        if(isset($_POST['groups']))
-            $groups = $_POST['groups'];
+        $groups = $_POST['groups'] ?? array();
         foreach ($groups as $gid) {
             $stmt = $db->prepare('INSERT INTO adlist_by_group (adlist_id,group_id) VALUES(:id,:gid);');
             if (!$stmt) {
                 throw new Exception('While preparing INSERT INTO statement: ' . $db->lastErrorMsg());
             }
-
             if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
                 throw new Exception('While binding id: ' . $db->lastErrorMsg());
             }
-
             if (!$stmt->bindValue(':gid', intval($gid), SQLITE3_INTEGER)) {
                 throw new Exception('While binding gid: ' . $db->lastErrorMsg());
             }
-
             if (!$stmt->execute()) {
                 throw new Exception('While executing INSERT INTO statement: ' . $db->lastErrorMsg());
             }
         }
-
-        if(!$db->query('COMMIT;')) {
+        if (!$db->query('COMMIT;')) {
             throw new Exception('While commiting changes to the database: ' . $db->lastErrorMsg());
         }
 
@@ -1056,29 +998,23 @@ if ($_POST['action'] == 'get_groups') {
         if (!$stmt) {
             throw new Exception('While preparing adlist_by_group statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id to adlist_by_group statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing adlist_by_group statement: ' . $db->lastErrorMsg());
         }
-
         $stmt = $db->prepare('DELETE FROM adlist WHERE id=:id');
         if (!$stmt) {
             throw new Exception('While preparing adlist statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
             throw new Exception('While binding id to adlist statement: ' . $db->lastErrorMsg());
         }
-
         if (!$stmt->execute()) {
             throw new Exception('While executing adlist statement: ' . $db->lastErrorMsg());
         }
-
-        if(!$db->query('COMMIT;')) {
+        if (!$db->query('COMMIT;')) {
             throw new Exception('While commiting changes to the database: ' . $db->lastErrorMsg());
         }
 
@@ -1104,15 +1040,13 @@ if ($_POST['action'] == 'get_groups') {
 
             foreach ($domains as $domain) {
                 // Silently skip this entry when it is empty or not a string (e.g. NULL)
-                if(!is_string($domain) || strlen($domain) == 0) {
+                if (!is_string($domain) || strlen($domain) == 0) {
                     continue;
                 }
-
                 if (!$stmt->bindValue(':domain', $domain, SQLITE3_TEXT)) {
                     throw new Exception('While binding domain: <strong>' . $db->lastErrorMsg() . '</strong><br>'.
                     'Added ' . $added . " out of ". $total . " domains");
                 }
-
                 if (!$stmt->execute()) {
                     throw new Exception('While executing: <strong>' . $db->lastErrorMsg() . '</strong><br>'.
                     'Added ' . $added . " out of ". $total . " domains");
@@ -1120,24 +1054,22 @@ if ($_POST['action'] == 'get_groups') {
                 $added++;
             }
 
-            if(!$db->query('COMMIT;')) {
+            if (!$db->query('COMMIT;')) {
                 throw new Exception('While commiting changes to the database: ' . $db->lastErrorMsg());
             }
 
             $after = intval($db->querySingle("SELECT COUNT(*) FROM domain_audit;"));
             $difference = $after - $before;
-            if($total === 1) {
-                if($difference !== 1) {
-                        $msg = "Not adding ". htmlentities(utf8_encode($domain)) . " as it is already on the list";
+            if ($total === 1) {
+                if ($difference !== 1) {
+                    $msg = "Not adding ". htmlentities(utf8_encode($domain)) . " as it is already on the list";
                 } else {
-                        $msg = "Added " . htmlentities(utf8_encode($domain));
+                    $msg = "Added " . htmlentities(utf8_encode($domain));
                 }
+            } elseif ($difference !== $total) {
+                $msg = "Added " . ($after-$before) . " out of ". $total . " domains (skipped duplicates)";
             } else {
-                if($difference !== $total) {
-                        $msg = "Added " . ($after-$before) . " out of ". $total . " domains (skipped duplicates)";
-                } else {
-                        $msg = "Added " . $total . " domains";
-                }
+                $msg = "Added " . $total . " domains";
             }
 
             // Reloading isn't necessary for audit domains (no effect on blocking)

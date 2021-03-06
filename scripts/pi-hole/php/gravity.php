@@ -12,26 +12,21 @@ function gravity_last_update($raw = false)
 {
 	$db = SQLite3_connect(getGravityDBFilename());
 	$date_file_created_unix = $db->querySingle("SELECT value FROM info WHERE property = 'updated';");
-	if($date_file_created_unix === false)
-	{
-		if($raw)
-		{
+	if ($date_file_created_unix === false) {
+		if($raw) {
 			// Array output
 			return array("file_exists" => false);
 		}
-		else
-		{
-			// String output
-			return "Gravity database not available";
-		}
+
+		// String output
+		return "Gravity database not available";
 	}
 	// Now that we know that $date_file_created_unix is a valid response, we can convert it to an integer
 	$date_file_created_unix = intval($date_file_created_unix);
 	$date_file_created = date_create("@".$date_file_created_unix);
 	$date_now = date_create("now");
 	$gravitydiff = date_diff($date_file_created,$date_now);
-	if($raw)
-	{
+	if($raw) {
 		// Array output
 		return array(
 			"file_exists"=> true,
@@ -44,13 +39,12 @@ function gravity_last_update($raw = false)
 			);
 	}
 
-	if($gravitydiff->d > 1)
-	{
+	if ($gravitydiff->d > 1) {
 		// String output (more than one day ago)
 		return $gravitydiff->format("Blocking list updated %a days, %H:%I (hh:mm) ago");
 	}
-	elseif($gravitydiff->d == 1)
-	{
+
+	if ($gravitydiff->d == 1) {
 		// String output (one day ago)
 		return $gravitydiff->format("Blocking list updated one day, %H:%I (hh:mm) ago");
 	}
@@ -58,4 +52,3 @@ function gravity_last_update($raw = false)
 	// String output (less than one day ago)
 	return $gravitydiff->format("Blocking list updated %H:%I (hh:mm) ago");
 }
-?>

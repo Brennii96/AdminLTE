@@ -9,86 +9,58 @@
 
 $showing = "";
 
-if(isset($setupVars["API_QUERY_LOG_SHOW"]))
-{
-	if($setupVars["API_QUERY_LOG_SHOW"] === "all")
-	{
+if (isset($setupVars["API_QUERY_LOG_SHOW"])) {
+	if ($setupVars["API_QUERY_LOG_SHOW"] === "all") {
 		$showing = "showing";
-	}
-	elseif($setupVars["API_QUERY_LOG_SHOW"] === "permittedonly")
-	{
+	} elseif ($setupVars["API_QUERY_LOG_SHOW"] === "permittedonly") {
 		$showing = "showing permitted";
-	}
-	elseif($setupVars["API_QUERY_LOG_SHOW"] === "blockedonly")
-	{
+	} elseif ($setupVars["API_QUERY_LOG_SHOW"] === "blockedonly") {
 		$showing = "showing blocked";
-	}
-	elseif($setupVars["API_QUERY_LOG_SHOW"] === "nothing")
-	{
+	} elseif ($setupVars["API_QUERY_LOG_SHOW"] === "nothing") {
 		$showing = "showing no queries (due to setting)";
 	}
-}
-else if(isset($_GET["type"]) && $_GET["type"] === "blocked")
-{
+} elseif (isset($_GET["type"]) && $_GET["type"] === "blocked") {
 	$showing = "showing blocked";
-}
-else
-{
+} else {
 	// If filter variable is not set, we
 	// automatically show all queries
 	$showing = "showing";
 }
 
 $showall = false;
-if(isset($_GET["all"]))
-{
+if (isset($_GET["all"])) {
 	$showing .= " all queries within the Pi-hole log";
-}
-else if(isset($_GET["client"]))
-{
+} elseif (isset($_GET["client"])) {
 	$showing .= " queries for client ".htmlentities($_GET["client"]);
-}
-else if(isset($_GET["forwarddest"]))
-{
-	if($_GET["forwarddest"] === "blocklist")
-		$showing .= " queries answered from blocklists";
-	elseif($_GET["forwarddest"] === "cache")
-		$showing .= " queries answered from cache";
-	else
-		$showing .= " queries for upstream destination ".htmlentities($_GET["forwarddest"]);
-}
-else if(isset($_GET["querytype"]))
-{
+} elseif (isset($_GET["forwarddest"])) {
+	if ($_GET["forwarddest"] === "blocklist") {
+        $showing .= " queries answered from blocklists";
+    } elseif ($_GET["forwarddest"] === "cache") {
+        $showing .= " queries answered from cache";
+    } else {
+        $showing .= " queries for upstream destination " . htmlentities($_GET["forwarddest"]);
+    }
+} elseif (isset($_GET["querytype"])) {
 	$showing .= " type ".getQueryTypeStr($_GET["querytype"])." queries";
-}
-else if(isset($_GET["domain"]))
-{
+} elseif (isset($_GET["domain"])) {
 	$showing .= " queries for domain ".htmlentities($_GET["domain"]);
-}
-else if(isset($_GET["from"]) || isset($_GET["until"]))
-{
+} elseif (isset($_GET["from"]) || isset($_GET["until"])) {
 	$showing .= " queries within specified time interval";
-}
-else
-{
+} else {
 	$showing .= " up to 100 queries";
 	$showall = true;
 }
 
-if(isset($setupVars["API_PRIVACY_MODE"]))
-{
-	if($setupVars["API_PRIVACY_MODE"])
-	{
-		// Overwrite string from above
-		$showing .= ", privacy mode enabled";
-	}
+if (isset($setupVars["API_PRIVACY_MODE"]) && $setupVars["API_PRIVACY_MODE"]) {
+    // Overwrite string from above
+    $showing .= ", privacy mode enabled";
 }
 
-if(strlen($showing) > 0)
-{
+if (strlen($showing) > 0) {
 	$showing = "(".$showing.")";
-	if($showall)
-		$showing .= ", <a href=\"?all\">show all</a>";
+	if ($showall) {
+        $showing .= ", <a href=\"?all\">show all</a>";
+    }
 }
 ?>
 

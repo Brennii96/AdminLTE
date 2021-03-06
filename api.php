@@ -18,77 +18,51 @@ $FTL_IP = "127.0.0.1";
 $data = array();
 
 // Common API functions
-if (isset($_GET['status']))
-{
+if (isset($_GET['status'])) {
 	$pistatus = pihole_execute('status web');
-	if(isset($pistatus[0]))
-    {
-        $pistatus = $pistatus[0];
-    }
-    else
-    {
-        $pistatus = null;
-    }
-	if ($pistatus === "1")
-	{
+	$pistatus = $pistatus[0] ?? null;
+	if ($pistatus === "1") {
 		$data = array_merge($data, array("status" => "enabled"));
-	}
-	else
-	{
+	} else {
 		$data = array_merge($data, array("status" => "disabled"));
 	}
-}
-elseif (isset($_GET['enable']) && $auth)
-{
-	if(isset($_GET["auth"]))
-	{
-	if($_GET["auth"] !== $pwhash)
-		die("Not authorized!");
-	}
-	else
-	{
+} elseif (isset($_GET['enable']) && $auth) {
+	if (isset($_GET["auth"])) {
+		if ($_GET["auth"] !== $pwhash) {
+			die("Not authorized!");
+		}
+	} else {
 		// Skip token validation if explicit auth string is given
 		check_csrf($_GET['token']);
 	}
 	pihole_execute('enable');
 	$data = array_merge($data, array("status" => "enabled"));
-	if (file_exists("../custom_disable_timer"))
-	{
+	if (file_exists("../custom_disable_timer")) {
 		unlink("../custom_disable_timer");
 	}
-}
-elseif (isset($_GET['disable']) && $auth)
-{
-	if(isset($_GET["auth"]))
-	{
-		if($_GET["auth"] !== $pwhash)
+} elseif (isset($_GET['disable']) && $auth) {
+	if (isset($_GET["auth"])) {
+		if ($_GET["auth"] !== $pwhash) {
 			die("Not authorized!");
-	}
-	else
-	{
+		}
+	} else {
 		// Skip token validation if explicit auth string is given
 		check_csrf($_GET['token']);
 	}
 	$disable = intval($_GET['disable']);
 	// intval returns the integer value on success, or 0 on failure
-	if($disable > 0)
-	{
+	if ($disable > 0) {
 		$timestamp = time();
 		pihole_execute("disable ".$disable."s");
 		file_put_contents("../custom_disable_timer",($timestamp+$disable)*1000);
-	}
-	else
-	{
+	} else {
 		pihole_execute('disable');
-		if (file_exists("../custom_disable_timer"))
-		{
+		if (file_exists("../custom_disable_timer")) {
 			unlink("../custom_disable_timer");
 		}
 	}
 	$data = array_merge($data, array("status" => "disabled"));
-}
-elseif (isset($_GET['versions']))
-{
+} elseif (isset($_GET['versions'])) {
 	// Determine if updates are available for Pi-hole
 	// using the same script that we use for the footer
 	// on the dashboard (update notifications are
@@ -110,15 +84,13 @@ elseif (isset($_GET['versions']))
 	$data = array_merge($data, $current);
 	$data = array_merge($data, $latest);
 	$data = array_merge($data, $branches);
-}
-elseif (isset($_GET['list']))
-{
-	if (!$auth)
+} elseif (isset($_GET['list'])) {
+	if (!$auth) {
 		die("Not authorized!");
-
-	if(!isset($_GET["list"]))
+	}
+	if (!isset($_GET["list"])) {
 		die("List has not been specified.");
-
+	}
 	switch ($_GET["list"]) {
 		case 'black':
 			$_POST['type'] = ListType::blacklist;
@@ -136,23 +108,17 @@ elseif (isset($_GET['list']))
 		default:
 			die("Invalid list [supported: black, regex_black, white, regex_white]");
 	}
-
-	if (isset($_GET['add']))
-	{
+	if (isset($_GET['add'])) {
 		// Set POST parameters and invoke script to add domain to list
 		$_POST['domain'] = $_GET['add'];
 		$_POST['action'] = 'add_domain';
 		require("scripts/pi-hole/php/groups.php");
-	}
-	elseif (isset($_GET['sub']))
-	{
+	} elseif (isset($_GET['sub'])) {
 		// Set POST parameters and invoke script to remove domain from list
 		$_POST['domain'] = $_GET['sub'];
 		$_POST['action'] = 'delete_domain_string';
 		require("scripts/pi-hole/php/groups.php");
-	}
-	else
-	{
+	} else {
 		// Set POST parameters and invoke script to get all domains
 		$_POST['action'] = 'get_domains';
 		require("scripts/pi-hole/php/groups.php");
@@ -165,12 +131,8 @@ elseif (isset($_GET['list']))
 require("api_FTL.php");
 
 header('Content-type: application/json');
-if(isset($_GET["jsonForceObject"]))
-{
+if (isset($_GET["jsonForceObject"])) {
 	echo json_encode($data, JSON_FORCE_OBJECT);
-}
-else
-{
+} else {
 	echo json_encode($data);
 }
-?>

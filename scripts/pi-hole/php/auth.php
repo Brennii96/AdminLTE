@@ -45,8 +45,9 @@ function check_cors() {
 
     # Allow user set virtual hostnames
     $virtual_host = getenv('VIRTUAL_HOST');
-    if (! empty($virtual_host))
-        array_push($AUTHORIZED_HOSTNAMES, $virtual_host);
+    if (! empty($virtual_host)) {
+        $AUTHORIZED_HOSTNAMES[] = $virtual_host;
+    }
 
     // Since the Host header is easily manipulated, we can only check if it's wrong and can't use it
     // to validate that the client is authorized, only unauthorized.
@@ -67,8 +68,8 @@ function check_cors() {
     // Remove "[" ... "]"
     $server_host = str_replace(array("[","]"), array("",""), $server_host);
 
-    if(isset($_SERVER['HTTP_HOST']) && !in_array($server_host, $AUTHORIZED_HOSTNAMES)) {
-        log_and_die("Failed Host Check: " . $server_host .' vs '. join(', ', $AUTHORIZED_HOSTNAMES));
+    if(isset($_SERVER['HTTP_HOST']) && !in_array($server_host, $AUTHORIZED_HOSTNAMES, true)) {
+        log_and_die("Failed Host Check: " . $server_host .' vs '. implode(', ', $AUTHORIZED_HOSTNAMES));
     }
 
     if(isset($_SERVER['HTTP_ORIGIN'])) {
@@ -82,8 +83,8 @@ function check_cors() {
         // Remove "[", "]","http://", and "https://"
         $server_origin = str_replace(array("[","]","http://","https://"), array("","","",""), $server_origin);
 
-        if(!in_array($server_origin, $AUTHORIZED_HOSTNAMES)) {
-            log_and_die("Failed CORS: " . htmlspecialchars($server_origin) .' vs '. join(', ', $AUTHORIZED_HOSTNAMES));
+        if(!in_array($server_origin, $AUTHORIZED_HOSTNAMES, true)) {
+            log_and_die("Failed CORS: " . htmlspecialchars($server_origin) .' vs '. implode(', ', $AUTHORIZED_HOSTNAMES));
         }
         header("Access-Control-Allow-Origin: ${_SERVER['HTTP_ORIGIN']}");
     }

@@ -15,30 +15,29 @@ $available_themes = array();
 */
 $available_themes["default-light"] = array("Pi-hole default theme (light, default)", false, "default-light");
 $available_themes["default-dark"] = array("Pi-hole midnight theme (dark)", true, "default-dark");
-$available_themes["default-darker"] = array("Pi-hole deep-midnight theme (dark)", true, "default-darker");
 
 $webtheme = "";
 // Try to load theme settings from setupVars.conf
-if(isset($setupVars['WEBTHEME']))
+if (isset($setupVars['WEBTHEME'])) {
     $webtheme = $setupVars['WEBTHEME'];
+}
 
 // May be overwritten by settings tab
-if(isset($_POST["field"]) &&
-   $_POST["field"] === "webUI" &&
-   isset($_POST["webtheme"])) {
+if (isset($_POST["field"], $_POST["webtheme"]) && $_POST["field"] === "webUI") {
     $webtheme = $_POST["webtheme"];
 }
 
-if(!array_key_exists($webtheme,$available_themes)) {
-        // Fallback to default (light) theme is property is not set
-        // or requested theme is not among the available
-        $webtheme = "default-light";
+if (!array_key_exists($webtheme,$available_themes)) {
+    // Fallback to default (light) theme is property is not set
+    // or requested theme is not among the available
+    $webtheme = "default-light";
 }
 
 $darkmode = $available_themes[$webtheme][1];
 $theme = $available_themes[$webtheme][2];
 
-function theme_selection() {
+function theme_selection()
+{
     global $available_themes, $webtheme;
     foreach ($available_themes as $key => $value) {
         ?><div><input type="radio" name="webtheme" value="<?php echo $key; ?>" id="webtheme_<?php echo $key; ?>" <?php if ($key === $webtheme){ ?>checked<?php } ?>>

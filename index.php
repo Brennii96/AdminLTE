@@ -12,14 +12,11 @@
     function getinterval()
     {
         global $piholeFTLConf;
-        if(isset($piholeFTLConf["MAXLOGAGE"]))
-        {
+        if (isset($piholeFTLConf["MAXLOGAGE"])) {
              return round(floatval($piholeFTLConf["MAXLOGAGE"]), 1);
         }
-        else
-        {
-             return "24";
-        }
+
+        return "24";
     }
 ?>
 <!-- Sourceing CSS colors from stylesheet to be used in JS code -->

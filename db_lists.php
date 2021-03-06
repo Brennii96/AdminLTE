@@ -46,12 +46,9 @@
 </div>
 
 <?php
-if($boxedlayout)
-{
+if ($boxedlayout) {
 	$tablelayout = "col-md-6";
-}
-else
-{
+} else {
 	$tablelayout = "col-md-6 col-lg-4";
 }
 ?>

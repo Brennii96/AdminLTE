@@ -11,7 +11,7 @@
     require_once "scripts/pi-hole/php/FTL.php";
     require "scripts/pi-hole/php/theme.php";
     $scriptname = basename($_SERVER['SCRIPT_FILENAME']);
-    $hostname = gethostname() ? gethostname() : "";
+    $hostname = gethostname() ?: "";
 
     check_cors();
     
@@ -19,50 +19,37 @@
     $cacheVer = filemtime(__FILE__);
 
     // Generate CSRF token
-    if(empty($_SESSION['token'])) {
+    if (empty($_SESSION['token'])) {
         $_SESSION['token'] = base64_encode(openssl_random_pseudo_bytes(32));
     }
     $token = $_SESSION['token'];
 
     // Try to get temperature value from different places (OS dependent)
-    if(file_exists("/sys/class/thermal/thermal_zone0/temp"))
-    {
+    if (file_exists("/sys/class/thermal/thermal_zone0/temp")) {
         $output = rtrim(file_get_contents("/sys/class/thermal/thermal_zone0/temp"));
-    }
-    elseif (file_exists("/sys/class/hwmon/hwmon0/temp1_input"))
-    {
+    } elseif (file_exists("/sys/class/hwmon/hwmon0/temp1_input")) {
         $output = rtrim(file_get_contents("/sys/class/hwmon/hwmon0/temp1_input"));
-    }
-    else
-    {
+    } else {
         $output = "";
     }
 
     // Test if we succeeded in getting the temperature
-    if(is_numeric($output))
-    {
+    if (is_numeric($output)) {
         // $output could be either 4-5 digits or 2-3, and we only divide by 1000 if it's 4-5
         // ex. 39007 vs 39
         $celsius = intval($output);
-
         // If celsius is greater than 1 degree and is in the 4-5 digit format
-        if($celsius > 1000) {
+        if ($celsius > 1000) {
             // Use multiplication to get around the division-by-zero error
             $celsius *= 1e-3;
         }
-
         // Get user-defined temperature limit if set
-        if(isset($setupVars['TEMPERATURE_LIMIT']))
-        {
+        if (isset($setupVars['TEMPERATURE_LIMIT'])) {
             $temperaturelimit = intval($setupVars['TEMPERATURE_LIMIT']);
-        }
-        else
-        {
+        } else {
             $temperaturelimit = 60;
         }
-    }
-    else
-    {
+    } else {
         // Nothing can be colder than -273.15 degree Celsius (= 0 Kelvin)
         // This is the minimum temperature possible (AKA absolute zero)
         $celsius = -273.16;
@@ -76,8 +63,7 @@
     // Get number of processing units available to PHP
     // (may be less than the number of online processors)
     $nproc = shell_exec('nproc');
-    if(!is_numeric($nproc))
-    {
+    if (!is_numeric($nproc)) {
         $cpuinfo = file_get_contents('/proc/cpuinfo');
         preg_match_all('/^processor/m', $cpuinfo, $matches);
         $nproc = count($matches[0]);
@@ -86,12 +72,10 @@
     // Get memory usage
     $data = explode("\n", file_get_contents("/proc/meminfo"));
     $meminfo = array();
-    if(count($data) > 0)
-    {
+    if (count($data) > 0) {
         foreach ($data as $line) {
             $expl = explode(":", trim($line));
-            if(count($expl) == 2)
-            {
+            if (count($expl) == 2) {
                 // remove " kB" from the end of the string and make it an integer
                 $meminfo[$expl[0]] = intval(substr($expl[1],0, -3));
             }
@@ -99,48 +83,36 @@
         $memory_used = $meminfo["MemTotal"]-$meminfo["MemFree"]-$meminfo["Buffers"]-$meminfo["Cached"];
         $memory_total = $meminfo["MemTotal"];
         $memory_usage = $memory_used/$memory_total;
-    }
-    else
-    {
+    } else {
         $memory_usage = -1;
     }
 
-    if($auth) {
+    if ($auth) {
         // For session timer
         $maxlifetime = ini_get("session.gc_maxlifetime");
 
         // Generate CSRF token
-        if(empty($_SESSION['token'])) {
+        if (empty($_SESSION['token'])) {
             $_SESSION['token'] = base64_encode(openssl_random_pseudo_bytes(32));
         }
         $token = $_SESSION['token'];
     }
 
-    if(isset($setupVars['WEBUIBOXEDLAYOUT']))
-    {
-        if($setupVars['WEBUIBOXEDLAYOUT'] === "boxed")
-        {
+    if (isset($setupVars['WEBUIBOXEDLAYOUT'])) {
+        if ($setupVars['WEBUIBOXEDLAYOUT'] === "boxed") {
             $boxedlayout = true;
-        }
-        else
-        {
+        } else {
             $boxedlayout = false;
         }
-    }
-    else
-    {
+    } else {
         $boxedlayout = true;
     }
 
     // Override layout setting if layout is changed via Settings page
-    if(isset($_POST["field"]))
-    {
-        if($_POST["field"] === "webUI" && isset($_POST["boxedlayout"]))
-        {
+    if (isset($_POST["field"])) {
+        if ($_POST["field"] === "webUI" && isset($_POST["boxedlayout"])) {
             $boxedlayout = true;
-        }
-        elseif($_POST["field"] === "webUI" && !isset($_POST["boxedlayout"]))
-        {
+        } elseif ($_POST["field"] === "webUI" && !isset($_POST["boxedlayout"])) {
             $boxedlayout = false;
         }
     }
@@ -338,22 +310,17 @@ if($auth) {
                         }
 
                         // CPU Temp
-                        if($FTL)
-                        {
+                        if ($FTL) {
                             if ($celsius >= -273.15) {
                                 echo "<span id=\"temperature\"><i class=\"fa fa-fire ";
                                 if ($celsius > $temperaturelimit) {
                                     echo "text-red";
-                                }
-                                else
-                                {
+                                } else {
                                     echo "text-vivid-blue";
                                 }
                                 ?>"></i> Temp:&nbsp;<span id="rawtemp" hidden><?php echo $celsius;?></span><span id="tempdisplay"></span></span><?php
                             }
-                        }
-                        else
-                        {
+                        } else {
                             echo '<span id=\"temperature\"><i class="fa fa-circle text-red"></i> FTL offline</span>';
                         }
                     ?>
@@ -362,9 +329,7 @@ if($auth) {
                     echo "<span title=\"Detected $nproc cores\"><i class=\"fa fa-circle ";
                         if ($loaddata[0] > $nproc) {
                             echo "text-red";
-                        }
-                        else
-                        {
+                        } else {
                             echo "text-green-light";
                         }
                         echo "\"></i> Load:&nbsp;&nbsp;" . $loaddata[0] . "&nbsp;&nbsp;" . $loaddata[1] . "&nbsp;&nbsp;". $loaddata[2] . "</span>";
@@ -374,17 +339,12 @@ if($auth) {
                     echo "<span><i class=\"fa fa-circle ";
                         if ($memory_usage > 0.75 || $memory_usage < 0.0) {
                             echo "text-red";
-                        }
-                        else
-                        {
+                        } else {
                             echo "text-green-light";
                         }
-                        if($memory_usage > 0.0)
-                        {
+                        if ($memory_usage > 0.0) {
                             echo "\"></i> Memory usage:&nbsp;&nbsp;" . sprintf("%.1f",100.0*$memory_usage) . "&thinsp;%</span>";
-                        }
-                        else
-                        {
+                        } else {
                             echo "\"></i> Memory usage:&nbsp;&nbsp; N/A</span>";
                         }
                     ?>
@@ -392,19 +352,14 @@ if($auth) {
             </div>
             <!-- sidebar menu: : style can be found in sidebar.less -->
             <?php
-            if($scriptname === "groups-domains.php" && isset($_GET['type']))
-            {
-                if($_GET["type"] === "white")
-                {
+            if ($scriptname === "groups-domains.php" && isset($_GET['type'])) {
+                if ($_GET["type"] === "white") {
                     $scriptname = "whitelist";
-                }
-                elseif($_GET["type"] === "black")
-                {
+                } elseif($_GET["type"] === "black") {
                     $scriptname = "blacklist";
                 }
             }
-            if(!$auth && (!isset($indexpage) || isset($_GET['login'])))
-            {
+            if (!$auth && (!isset($indexpage) || isset($_GET['login']))) {
                 $scriptname = "login";
             }
             ?>
@@ -416,14 +371,14 @@ if($auth) {
                         <i class="fa fa-fw fa-home"></i> <span>Dashboard</span>
                     </a>
                 </li>
-                <?php if($auth){ ?>
+                <?php if ($auth) { ?>
                 <!-- Query Log -->
-                <li<?php if($scriptname === "queries.php"){ ?> class="active"<?php } ?>>
+                <li<?php if ($scriptname === "queries.php") { ?> class="active"<?php } ?>>
                     <a href="queries.php">
                         <i class="fa fa-fw fa-file-alt"></i> <span>Query Log</span>
                     </a>
                 </li>
-                <li class="treeview<?php if($scriptname === "db_queries.php" || $scriptname === "db_lists.php" || $scriptname === "db_graph.php"){ ?> active<?php } ?>">
+                <li class="treeview<?php if ($scriptname === "db_queries.php" || $scriptname === "db_lists.php" || $scriptname === "db_graph.php") { ?> active<?php } ?>">
                   <a href="#">
                     <i class="fa fa-clock"></i> <span>Long-term data</span>
                     <span class="pull-right-container">
@@ -431,17 +386,17 @@ if($auth) {
                     </span>
                   </a>
                   <ul class="treeview-menu">
-                    <li<?php if($scriptname === "db_graph.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "db_graph.php") { ?> class="active"<?php } ?>>
                         <a href="db_graph.php">
                             <i class="fa fa-fw fa-file-alt"></i> Graphics
                         </a>
                     </li>
-                    <li<?php if($scriptname === "db_queries.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "db_queries.php") { ?> class="active"<?php } ?>>
                         <a href="db_queries.php">
                             <i class="fa fa-fw fa-file-alt"></i> Query Log
                         </a>
                     </li>
-                    <li<?php if($scriptname === "db_lists.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "db_lists.php") { ?> class="active"<?php } ?>>
                         <a href="db_lists.php">
                             <i class="fa fa-fw fa-file-alt"></i> Top Lists
                         </a>
@@ -449,19 +404,19 @@ if($auth) {
                   </ul>
                 </li>
                 <!-- Whitelist -->
-                <li<?php if($scriptname === "whitelist"){ ?> class="active"<?php } ?>>
+                <li<?php if ($scriptname === "whitelist") { ?> class="active"<?php } ?>>
                     <a href="groups-domains.php?type=white">
                         <i class="fa fa-fw fa-check-circle "></i> <span>Whitelist</span>
                     </a>
                 </li>
                 <!-- Blacklist -->
-                <li<?php if($scriptname === "blacklist"){ ?> class="active"<?php } ?>>
+                <li<?php if ($scriptname === "blacklist") { ?> class="active"<?php } ?>>
                     <a href="groups-domains.php?type=black">
                         <i class="fa fa-fw fa-ban"></i> <span>Blacklist</span>
                     </a>
                 </li>
                 <!-- Group Management -->
-                <li class="treeview<?php if (in_array($scriptname, array("groups.php", "groups-adlists.php", "groups-clients.php", "groups-domains.php"))){ ?> active<?php } ?>">
+                <li class="treeview<?php if (in_array($scriptname, array("groups.php", "groups-adlists.php", "groups-clients.php", "groups-domains.php"))) { ?> active<?php } ?>">
                   <a href="#">
                     <i class="fa fa-fw fa-users-cog"></i> <span>Group Management</span>
                     <span class="pull-right-container">
@@ -469,22 +424,22 @@ if($auth) {
                     </span>
                   </a>
                   <ul class="treeview-menu">
-                    <li<?php if($scriptname === "groups.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "groups.php") { ?> class="active"<?php } ?>>
                         <a href="groups.php">
                             <i class="fa fa-fw fa-user-friends"></i> Groups
                         </a>
                     </li>
-                    <li<?php if($scriptname === "groups-clients.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "groups-clients.php") { ?> class="active"<?php } ?>>
                         <a href="groups-clients.php">
                             <i class="fa fa-fw fa-laptop"></i> Clients
                         </a>
                     </li>
-                    <li<?php if($scriptname === "groups-domains.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "groups-domains.php") { ?> class="active"<?php } ?>>
                         <a href="groups-domains.php">
                             <i class="fa fa-fw fa-list"></i> Domains
                         </a>
                     </li>
-                    <li<?php if($scriptname === "groups-adlists.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "groups-adlists.php") { ?> class="active"<?php } ?>>
                         <a href="groups-adlists.php">
                             <i class="fa fa-fw fa-shield-alt"></i> Adlists
                         </a>
@@ -537,7 +492,7 @@ if($auth) {
                     </a>
                 </li>
                 <!-- Tools -->
-                <li class="treeview<?php if (in_array($scriptname, array("messages.php", "gravity.php", "queryads.php", "auditlog.php", "taillog.php", "taillog-FTL.php", "debug.php", "network.php"))){ ?> active<?php } ?>">
+                <li class="treeview<?php if (in_array($scriptname, array("messages.php", "gravity.php", "queryads.php", "auditlog.php", "taillog.php", "taillog-FTL.php", "debug.php", "network.php"))) { ?> active<?php } ?>">
                   <a href="#">
                     <i class="fa fa-fw fa-folder"></i> <span>Tools</span>
                     <span class="pull-right-container">
@@ -546,49 +501,49 @@ if($auth) {
                   </a>
                   <ul class="treeview-menu">
                     <!-- Pi-hole diagnosis -->
-                    <li<?php if($scriptname === "messages.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "messages.php") { ?> class="active"<?php } ?>>
                         <a href="messages.php">
                             <i class="fa fa-fw fa-stethoscope"></i> Pi-hole diagnosis
                         </a>
                     </li>
                     <!-- Run gravity.sh -->
-                    <li<?php if($scriptname === "gravity.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "gravity.php") { ?> class="active"<?php } ?>>
                         <a href="gravity.php">
                             <i class="fa fa-fw fa-arrow-circle-down"></i> Update Gravity
                         </a>
                     </li>
                     <!-- Query Lists -->
-                    <li<?php if($scriptname === "queryads.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "queryads.php") { ?> class="active"<?php } ?>>
                         <a href="queryads.php">
                             <i class="fa fa-fw fa-search"></i> Query Lists
                         </a>
                     </li>
                     <!-- Audit log -->
-                    <li<?php if($scriptname === "auditlog.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "auditlog.php") { ?> class="active"<?php } ?>>
                         <a href="auditlog.php">
                             <i class="fa fa-fw fa-balance-scale"></i> Audit log
                         </a>
                     </li>
                     <!-- Tail pihole.log -->
-                    <li<?php if($scriptname === "taillog.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "taillog.php") { ?> class="active"<?php } ?>>
                         <a href="taillog.php">
                             <i class="fa fa-fw fa-list-ul"></i> Tail pihole.log
                         </a>
                     </li>
                     <!-- Tail pihole-FTL.log -->
-                    <li<?php if($scriptname === "taillog-FTL.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "taillog-FTL.php") { ?> class="active"<?php } ?>>
                         <a href="taillog-FTL.php">
                             <i class="fa fa-fw fa-list-ul"></i> Tail pihole-FTL.log
                         </a>
                     </li>
                     <!-- Generate debug log -->
-                    <li<?php if($scriptname === "debug.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "debug.php") { ?> class="active"<?php } ?>>
                         <a href="debug.php">
                             <i class="fa fa-fw fa-ambulance"></i> Generate debug log
                         </a>
                     </li>
                     <!-- Network -->
-                    <li<?php if($scriptname === "network.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "network.php") { ?> class="active"<?php } ?>>
                         <a href="network.php">
                             <i class="fa fa-fw fa-network-wired"></i> Network
                         </a>
@@ -596,13 +551,13 @@ if($auth) {
                   </ul>
                 </li>
                 <!-- Settings -->
-                <li<?php if($scriptname === "settings.php"){ ?> class="active"<?php } ?>>
+                <li<?php if ($scriptname === "settings.php") { ?> class="active"<?php } ?>>
                     <a href="settings.php">
                         <i class="fa fa-fw fa-cogs"></i> <span>Settings</span>
                     </a>
                 </li>
                 <!-- Local DNS Records -->
-                <li class="treeview <?php if(in_array($scriptname, array("dns_records.php", "cname_records.php"))){ ?>active<?php } ?>">
+                <li class="treeview <?php if (in_array($scriptname, array("dns_records.php", "cname_records.php"))) { ?>active<?php } ?>">
                   <a href="#">
                     <i class="fa fa-fw fa-address-book"></i> <span>Local DNS</span>                    
                     <span class="pull-right-container">
@@ -610,12 +565,12 @@ if($auth) {
                     </span>               
                   </a>
                   <ul class="treeview-menu">
-                    <li<?php if($scriptname === "dns_records.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "dns_records.php") { ?> class="active"<?php } ?>>
                         <a href="dns_records.php">
                             <i class="fa fa-fw fa-address-book"></i> <span>DNS Records</span>
                         </a>
                     </li>
-                    <li<?php if($scriptname === "cname_records.php"){ ?> class="active"<?php } ?>>
+                    <li<?php if ($scriptname === "cname_records.php") { ?> class="active"<?php } ?>>
                         <a href="cname_records.php">
                             <i class="fa fa-fw fa-address-book"></i> <span>CNAME Records</span>
                         </a>
@@ -625,7 +580,7 @@ if($auth) {
                 <!-- Logout -->
                 <?php
                 // Show Logout button if $auth is set and authorization is required
-                if(strlen($pwhash) > 0) { ?>
+                if (strlen($pwhash) > 0) { ?>
                 <li>
                     <a href="?logout">
                         <i class="fa fa-fw fa-user-times"></i> <span>Logout</span>
@@ -636,8 +591,8 @@ if($auth) {
                 <!-- Login -->
                 <?php
                 // Show Login button if $auth is *not* set and authorization is required
-                if(strlen($pwhash) > 0 && !$auth) { ?>
-                <li<?php if($scriptname === "login"){ ?> class="active"<?php } ?>>
+                if (strlen($pwhash) > 0 && !$auth) { ?>
+                <li<?php if ($scriptname === "login") { ?> class="active"<?php } ?>>
                     <a href="index.php?login">
                         <i class="fa fa-fw fa-user"></i> <span>Login</span>
                     </a>
@@ -673,7 +628,7 @@ if($auth) {
     //
     // If auth is required and not set, i.e. no successfully logged in,
     // we show the reduced version of the summary (index) page
-    if(!$auth && (!isset($indexpage) || isset($_GET['login']))){
+    if (!$auth && (!isset($indexpage) || isset($_GET['login']))) {
         require "scripts/pi-hole/php/loginpage.php";
         require "footer.php";
         exit();

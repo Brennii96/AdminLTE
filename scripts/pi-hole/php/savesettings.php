@@ -6,12 +6,12 @@
 *  This file is copyright under the latest version of the EUPL.
 *  Please see LICENSE file for your rights under this license. */
 
-if(!in_array(basename($_SERVER['SCRIPT_FILENAME']), ["settings.php", "teleporter.php"], true))
-{
+if (!in_array(basename($_SERVER['SCRIPT_FILENAME']), ["settings.php", "teleporter.php"], true)) {
 	die("Direct access to this script is forbidden!");
 }
 
-function validIP($address){
+function validIP($address)
+{
 	if (preg_match('/[.:0]/', $address) && !preg_match('/[1-9a-f]/', $address)) {
 		// Test if address contains either `:` or `0` but not 1-9 or a-f
 		return false;
@@ -19,41 +19,36 @@ function validIP($address){
 	return !filter_var($address, FILTER_VALIDATE_IP) === false;
 }
 
-function validCIDRIP($address){
+function validCIDRIP($address)
+{
 	// This validation strategy has been taken from ../js/groups-common.js
 	$isIPv6 = strpos($address, ":") !== false;
-	if($isIPv6) {
+	if ($isIPv6) {
 		// One IPv6 element is 16bit: 0000 - FFFF
 		$v6elem = "[0-9A-Fa-f]{1,4}";
 		// CIDR for IPv6 is any multiple of 4 from 4 up to 128 bit
 		$v6cidr = "(4";
-		for ($i=8; $i <= 128; $i+=4) { 
+		for ($i=8; $i <= 128; $i+=4) {
 			$v6cidr .= "|$i";
 		}
 		$v6cidr .= ")";
 		$validator = "/^(((?:$v6elem))((?::$v6elem))*::((?:$v6elem))((?::$v6elem))*|((?:$v6elem))((?::$v6elem)){7})\/$v6cidr$/";
 		return preg_match($validator, $address);
-	} else {
-		// One IPv4 element is 8bit: 0 - 256
-		$v4elem = "(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]?|0)";
-		// Note that rev-server accepts only /8, /16, /24, and /32
-		$allowedv4cidr = "(8|16|24|32)";
-		$validator = "/^$v4elem\.$v4elem\.$v4elem\.$v4elem\/$allowedv4cidr$/";
-		return preg_match($validator, $address);
 	}
+
+	// One IPv4 element is 8bit: 0 - 256
+	$v4elem = "(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]?|0)";
+	// Note that rev-server accepts only /8, /16, /24, and /32
+	$allowedv4cidr = "(8|16|24|32)";
+	$validator = "/^$v4elem\.$v4elem\.$v4elem\.$v4elem\/$allowedv4cidr$/";
+	return preg_match($validator, $address);
 }
 
 // Check for existance of variable
 // and test it only if it exists
-function istrue(&$argument) {
-	if(isset($argument))
-	{
-		if($argument)
-		{
-			return true;
-		}
-	}
-	return false;
+function istrue(&$argument)
+{
+	return isset($argument) && $argument;
 }
 
 // Credit: http://stackoverflow.com/a/4694816/2087442
@@ -83,8 +78,9 @@ function validMAC($mac_addr)
 function formatMAC($mac_addr)
 {
 	preg_match("/([0-9a-fA-F]{2}[:]){5}([0-9a-fA-F]{2})/", $mac_addr, $matches);
-	if(count($matches) > 0)
+	if (count($matches) > 0) {
 		return $matches[0];
+	}
 	return null;
 }
 
@@ -103,57 +99,54 @@ function readStaticLeasesFile($origin_file="/etc/dnsmasq.d/04-pihole-static-dhcp
 {
 	global $dhcp_static_leases;
 	$dhcp_static_leases = array();
-	if(!file_exists($origin_file) || !is_readable($origin_file))
+	if (!file_exists($origin_file) || !is_readable($origin_file)) {
 		return false;
+	}
 
 	$dhcpstatic = @fopen($origin_file, 'r');
-	if(!is_resource($dhcpstatic))
+	if (!is_resource($dhcpstatic)) {
 		return false;
+	}
 
 	while(!feof($dhcpstatic))
 	{
 		// Remove any possibly existing variable with this name
 		$mac = ""; $one = ""; $two = "";
 		sscanf(trim(fgets($dhcpstatic)),"dhcp-host=%[^,],%[^,],%[^,]",$mac,$one,$two);
-		if(strlen($mac) > 0 && validMAC($mac))
-		{
-			if(validIP($one) && strlen($two) == 0)
+		if (strlen($mac) > 0 && validMAC($mac)) {
+			if (validIP($one) && strlen($two) == 0) {
 				// dhcp-host=mac,IP - no HOST
-				array_push($dhcp_static_leases,["hwaddr"=>$mac, "IP"=>$one, "host"=>""]);
-			elseif(strlen($two) == 0)
+				$dhcp_static_leases[] = ["hwaddr" => $mac, "IP" => $one, "host" => ""];
+			} elseif (strlen($two) == 0) {
 				// dhcp-host=mac,hostname - no IP
-				array_push($dhcp_static_leases,["hwaddr"=>$mac, "IP"=>"", "host"=>$one]);
-			else
+				$dhcp_static_leases[] = ["hwaddr" => $mac, "IP" => "", "host" => $one];
+			} else {
 				// dhcp-host=mac,IP,hostname
-				array_push($dhcp_static_leases,["hwaddr"=>$mac, "IP"=>$one, "host"=>$two]);
-		}
-		else if(validIP($one) && validDomain($mac))
-		{
+				$dhcp_static_leases[] = ["hwaddr" => $mac, "IP" => $one, "host" => $two];
+			}
+		} elseif (validIP($one) && validDomain($mac)) {
 			// dhcp-host=hostname,IP - no MAC
-			array_push($dhcp_static_leases,["hwaddr"=>"", "IP"=>$one, "host"=>$mac]);
+			$dhcp_static_leases[] = ["hwaddr" => "", "IP" => $one, "host" => $mac];
 		}
 	}
 	return true;
 }
 
-function isequal(&$argument, &$compareto) {
-	if(isset($argument))
-	{
-		if($argument === $compareto)
-		{
-			return true;
-		}
-	}
-	return false;
+function isequal(&$argument, &$compareto)
+{
+	return isset($argument) && $argument === $compareto;
 }
 
-function isinserverlist($addr) {
+function isinserverlist($addr)
+{
 	global $DNSserverslist;
 	foreach ($DNSserverslist as $key => $value) {
-		if (isequal($value['v4_1'],$addr) || isequal($value['v4_2'],$addr))
+		if (isequal($value['v4_1'],$addr) || isequal($value['v4_2'],$addr)) {
 			return true;
-		if (isequal($value['v6_1'],$addr) || isequal($value['v6_2'],$addr))
+		}
+		if (isequal($value['v6_1'],$addr) || isequal($value['v6_2'],$addr)) {
 			return true;
+		}
 	}
 	return false;
 }
@@ -164,10 +157,8 @@ function readDNSserversList()
 	// Reset list
 	$list = [];
 	$handle = @fopen("/etc/pihole/dns-servers.conf", "r");
-	if ($handle)
-	{
-		while (($line = fgets($handle)) !== false)
-		{
+	if ($handle) {
+		while (($line = fgets($handle)) !== false) {
 			$line = rtrim($line);
 			$line = explode(';', $line);
 			$name = $line[0];
@@ -193,51 +184,40 @@ function readDNSserversList()
 
 require_once("database.php");
 
-function addStaticDHCPLease($mac, $ip, $hostname) {
+function addStaticDHCPLease($mac, $ip, $hostname)
+{
 	global $error, $success, $dhcp_static_leases;
 
 	try {
-		if(!validMAC($mac))
-		{
+		if (!validMAC($mac)) {
 			throw new Exception("MAC address (".htmlspecialchars($mac).") is invalid!<br>", 0);
 		}
 		$mac = strtoupper($mac);
-
-		if(!validIP($ip) && strlen($ip) > 0)
-		{
+		if (!validIP($ip) && strlen($ip) > 0) {
 			throw new Exception("IP address (".htmlspecialchars($ip).") is invalid!<br>", 1);
 		}
-
-		if(!validDomain($hostname) && strlen($hostname) > 0)
-		{
+		if (!validDomain($hostname) && strlen($hostname) > 0) {
 			throw new Exception("Host name (".htmlspecialchars($hostname).") is invalid!<br>", 2);
 		}
-
-		if(strlen($hostname) == 0 && strlen($ip) == 0)
-		{
+		if (strlen($hostname) == 0 && strlen($ip) == 0) {
 			throw new Exception("You can not omit both the IP address and the host name!<br>", 3);
 		}
-
-		if(strlen($hostname) == 0)
+		if (strlen($hostname) == 0) {
 			$hostname = "nohost";
-
-		if(strlen($ip) == 0)
+		}
+		if (strlen($ip) == 0) {
 			$ip = "noip";
-
+		}
 		// Test if this lease is already included
 		readStaticLeasesFile();
-
 		foreach($dhcp_static_leases as $lease) {
-			if($lease["hwaddr"] === $mac)
-			{
-				throw new Exception("Static lease for MAC address (".htmlspecialchars($mac).") already defined!<br>", 4);
+			if ($lease["hwaddr"] === $mac) {
+				throw new Exception("Static release for MAC address (".htmlspecialchars($mac).") already defined!<br>", 4);
 			}
-			if($ip !== "noip" && $lease["IP"] === $ip)
-			{
+			if($ip !== "noip" && $lease["IP"] === $ip) {
 				throw new Exception("Static lease for IP address (".htmlspecialchars($ip).") already defined!<br>", 5);
 			}
-			if($lease["host"] === $hostname)
-			{
+			if($lease["host"] === $hostname) {
 				throw new Exception("Static lease for hostname (".htmlspecialchars($hostname).") already defined!<br>", 6);
 			}
 		}
@@ -257,8 +237,7 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 	$error = "";
 	$success = "";
 
-	if(isset($_POST["field"]))
-	{
+	if (isset($_POST["field"])) {
 		// Handle CSRF
 		check_csrf(isset($_POST["token"]) ? $_POST["token"] : "");
 
@@ -266,154 +245,106 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 		switch ($_POST["field"]) {
 			// Set DNS server
 			case "DNS":
-
 				$DNSservers = [];
 				// Add selected predefined servers to list
-				foreach ($DNSserverslist as $key => $value)
-				{
-					foreach(["v4_1", "v4_2", "v6_1", "v6_2"] as $type)
-					{
-						if(@array_key_exists("DNSserver".str_replace(".","_",$value[$type]),$_POST))
-						{
-							array_push($DNSservers,$value[$type]);
+				foreach ($DNSserverslist as $key => $value) {
+					foreach(["v4_1", "v4_2", "v6_1", "v6_2"] as $type) {
+						if (@array_key_exists("DNSserver".str_replace(".","_",$value[$type]),$_POST)) {
+							$DNSservers[] = $value[$type];
 						}
 					}
 				}
 
 				// Test custom server fields
-				for($i=1;$i<=4;$i++)
-				{
-					if(array_key_exists("custom".$i,$_POST))
-					{
+				for ($i=1;$i<=4;$i++) {
+					if (array_key_exists("custom".$i,$_POST)) {
 						$exploded = explode("#", $_POST["custom".$i."val"], 2);
 						$IP = trim($exploded[0]);
 
-						if(!validIP($IP))
-						{
+						if (!validIP($IP)) {
 							$error .= "IP (".htmlspecialchars($IP).") is invalid!<br>";
-						}
-						else
-						{
-							if(count($exploded) > 1)
-							{
+						} else {
+							if (count($exploded) > 1) {
 								$port = trim($exploded[1]);
-								if(!is_numeric($port))
-								{
+								if (!is_numeric($port)) {
 									$error .= "Port (".htmlspecialchars($port).") is invalid!<br>";
-								}
-								else
-								{
+								} else {
 									$IP .= "#".$port;
 								}
 							}
-
-							array_push($DNSservers,$IP);
+							$DNSservers[] = $IP;
 						}
 					}
 				}
 				$DNSservercount = count($DNSservers);
 
 				// Check if at least one DNS server has been added
-				if($DNSservercount < 1)
-				{
+				if ($DNSservercount < 1) {
 					$error .= "No DNS server has been selected.<br>";
 				}
-
 				// Check if domain-needed is requested
-				if(isset($_POST["DNSrequiresFQDN"]))
-				{
+				if (isset($_POST["DNSrequiresFQDN"])) {
 					$extra = "domain-needed ";
-				}
-				else
-				{
+				} else {
 					$extra = "domain-not-needed ";
 				}
-
 				// Check if domain-needed is requested
-				if(isset($_POST["DNSbogusPriv"]))
-				{
+				if (isset($_POST["DNSbogusPriv"])) {
 					$extra .= "bogus-priv ";
-				}
-				else
-				{
+				} else {
 					$extra .= "no-bogus-priv ";
 				}
-
 				// Check if DNSSEC is requested
-				if(isset($_POST["DNSSEC"]))
-				{
+				if (isset($_POST["DNSSEC"])) {
 					$extra .= "dnssec";
-				}
-				else
-				{
+				} else {
 					$extra .= "no-dnssec";
 				}
-
 				// Check if rev-server is requested
-				if(isset($_POST["rev_server"]))
-				{
+				if (isset($_POST["rev_server"])) {
 					// Validate CIDR IP
 					$cidr = trim($_POST["rev_server_cidr"]);
-					if (!validCIDRIP($cidr))
-					{
+					if (!validCIDRIP($cidr)) {
 						$error .= "Conditional forwarding subnet (\"".htmlspecialchars($cidr)."\") is invalid!<br>".
 						          "This field requires CIDR notation for local subnets (e.g., 192.168.0.0/16).<br>".
 						          "Please use only subnets /8, /16, /24, and /32.<br>";
 					}
-
 					// Validate target IP
 					$target = trim($_POST["rev_server_target"]);
-					if (!validIP($target))
-					{
+					if (!validIP($target)) {
 						$error .= "Conditional forwarding target IP (\"".htmlspecialchars($target)."\") is invalid!<br>";
 					}
-
 					// Validate conditional forwarding domain name (empty is okay)
 					$domain = trim($_POST["rev_server_domain"]);
-					if(strlen($domain) > 0 && !validDomain($domain))
-					{
+					if (strlen($domain) > 0 && !validDomain($domain)) {
 						$error .= "Conditional forwarding domain name (\"".htmlspecialchars($domain)."\") is invalid!<br>";
 					}
-
-					if(!$error)
-					{
+					if (!$error) {
 						$extra .= " rev-server ".$cidr." ".$target." ".$domain;
 					}
 				}
-
 				// Check if DNSinterface is set
-				if(isset($_POST["DNSinterface"]))
-				{
-					if($_POST["DNSinterface"] === "single")
-					{
+				if (isset($_POST["DNSinterface"])) {
+					if ($_POST["DNSinterface"] === "single") {
 						$DNSinterface = "single";
-					}
-					elseif($_POST["DNSinterface"] === "all")
-					{
+					} elseif ($_POST["DNSinterface"] === "all") {
 						$DNSinterface = "all";
-					}
-					else
-					{
+					} else {
 						$DNSinterface = "local";
 					}
-				}
-				else
-				{
+				} else {
 					// Fallback
 					$DNSinterface = "local";
 				}
 				pihole_execute("-a -i ".$DNSinterface." -web");
 
 				// If there has been no error we can save the new DNS server IPs
-				if(!strlen($error))
-				{
+				if(!strlen($error)) {
 					$IPs = implode (",", $DNSservers);
 					$return = pihole_execute("-a setdns \"".$IPs."\" ".$extra);
 					$success .= htmlspecialchars(end($return))."<br>";
 					$success .= "The DNS settings have been updated (using ".$DNSservercount." DNS servers)";
-				}
-				else
-				{
+				} else {
 					$error .= "The settings have been reset to their previous values";
 				}
 
@@ -422,18 +353,13 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 			// Set query logging
 			case "Logging":
 
-				if($_POST["action"] === "Disable")
-				{
+				if ($_POST["action"] === "Disable") {
 					pihole_execute("-l off");
 					$success .= "Logging has been disabled and logs have been flushed";
-				}
-				elseif($_POST["action"] === "Disable-noflush")
-				{
+				} elseif ($_POST["action"] === "Disable-noflush") {
 					pihole_execute("-l off noflush");
 					$success .= "Logging has been disabled, your logs have <strong>not</strong> been flushed";
-				}
-				else
-				{
+				} else {
 					pihole_execute("-l on");
 					$success .= "Logging has been enabled";
 				}
@@ -451,18 +377,13 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 
 				$domainlist = "";
 				$first = true;
-				foreach($domains as $domain)
-				{
-					if(!validDomainWildcard($domain) || validIP($domain))
-					{
+				foreach ($domains as $domain) {
+					if (!validDomainWildcard($domain) || validIP($domain)) {
 						$error .= "Top Domains/Ads entry ".htmlspecialchars($domain)." is invalid (use only domains)!<br>";
 					}
-					if(!$first)
-					{
+					if (!$first) {
 						$domainlist .= ",";
-					}
-					else
-					{
+					} else {
 						$first = false;
 					}
 					$domainlist .= $domain;
@@ -470,80 +391,55 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 
 				$clientlist = "";
 				$first = true;
-				foreach($clients as $client)
-				{
-					if(!validDomainWildcard($client) && !validIP($client))
-					{
+				foreach ($clients as $client) {
+					if (!validDomainWildcard($client) && !validIP($client)) {
 						$error .= "Top Clients entry ".htmlspecialchars($client)." is invalid (use only host names and IP addresses)!<br>";
 					}
-					if(!$first)
-					{
+					if (!$first) {
 						$clientlist .= ",";
-					}
-					else
-					{
+					} else {
 						$first = false;
 					}
 					$clientlist .= $client;
 				}
 
 				// Set Top Lists options
-				if(!strlen($error))
-				{
+				if (!strlen($error)) {
 					// All entries are okay
 					pihole_execute("-a setexcludedomains ".$domainlist);
 					pihole_execute("-a setexcludeclients ".$clientlist);
 					$success .= "The API settings have been updated<br>";
-				}
-				else
-				{
+				} else {
 					$error .= "The settings have been reset to their previous values";
 				}
 
 				// Set query log options
-				if(isset($_POST["querylog-permitted"]) && isset($_POST["querylog-blocked"]))
-				{
+				if (isset($_POST["querylog-permitted"], $_POST["querylog-blocked"])) {
 					pihole_execute("-a setquerylog all");
-					if(!isset($_POST["privacyMode"]))
-					{
+					if (!isset($_POST["privacyMode"])) {
 						$success .= "All entries will be shown in Query Log";
-					}
-					else
-					{
+					} else {
 						$success .= "Only blocked entries will be shown in Query Log";
 					}
-				}
-				elseif(isset($_POST["querylog-permitted"]))
-				{
+				} elseif(isset($_POST["querylog-permitted"])) {
 					pihole_execute("-a setquerylog permittedonly");
-					if(!isset($_POST["privacyMode"]))
-					{
+					if(!isset($_POST["privacyMode"])) {
 						$success .= "Only permitted will be shown in Query Log";
-					}
-					else
-					{
+					} else {
 						$success .= "No entries will be shown in Query Log";
 					}
-				}
-				elseif(isset($_POST["querylog-blocked"]))
-				{
+				} elseif(isset($_POST["querylog-blocked"])) {
 					pihole_execute("-a setquerylog blockedonly");
 					$success .= "Only blocked entries will be shown in Query Log";
-				}
-				else
-				{
+				} else {
 					pihole_execute("-a setquerylog nothing");
 					$success .= "No entries will be shown in Query Log";
 				}
 
-
-				if(isset($_POST["privacyMode"]))
-				{
+				if (isset($_POST["privacyMode"])) {
 					pihole_execute("-a privacymode true");
 					$success .= " (privacy mode enabled)";
-				}
-				else
-				{
+				} else {
 					pihole_execute("-a privacymode false");
 				}
 
@@ -551,31 +447,24 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 
 			case "webUI":
 				$adminemail = trim($_POST["adminemail"]);
-				if(strlen($adminemail) == 0 || !isset($adminemail))
-				{
+				if (strlen($adminemail) == 0 || !isset($adminemail)) {
 					$adminemail = '';
 				}
-				if(strlen($adminemail) > 0 && !validEmail($adminemail))
-				{
+				if (strlen($adminemail) > 0 && !validEmail($adminemail)) {
 					$error .= "Administrator email address (".htmlspecialchars($adminemail).") is invalid!<br>";
-				}
-				else
-				{
+				} else {
 					pihole_execute('-a -e \''.$adminemail.'\'');
 				}
-				if(isset($_POST["boxedlayout"]))
-				{
+				if (isset($_POST["boxedlayout"])) {
 					pihole_execute('-a layout boxed');
-				}
-				else
-				{
+				} else {
 					pihole_execute('-a layout traditional');
 				}
-				if(isset($_POST["webtheme"]))
-				{
+				if (isset($_POST["webtheme"])) {
 					global $available_themes;
-					if(array_key_exists($_POST["webtheme"], $available_themes))
-						exec('sudo pihole -a theme '.$_POST["webtheme"]);
+					if (array_key_exists($_POST["webtheme"], $available_themes)) {
+						exec('sudo pihole -a theme ' . $_POST["webtheme"]);
+					}
 				}
 				$success .= "The webUI settings have been updated";
 				break;
@@ -601,9 +490,7 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 				break;
 
 			case "DHCP":
-
-				if(isset($_POST["addstatic"]))
-				{
+				if (isset($_POST["addstatic"])) {
 					$mac = trim($_POST["AddMAC"]);
 					$ip = trim($_POST["AddIP"]);
 					$hostname = trim($_POST["AddHostname"]);
@@ -611,91 +498,62 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 					addStaticDHCPLease($mac, $ip, $hostname);
 					break;
 				}
-
-				if(isset($_POST["removestatic"]))
-				{
+				if (isset($_POST["removestatic"])) {
 					$mac = $_POST["removestatic"];
-					if(!validMAC($mac))
-					{
+					if (!validMAC($mac)) {
 						$error .= "MAC address (".htmlspecialchars($mac).") is invalid!<br>";
 					}
 					$mac = strtoupper($mac);
 
-					if(!strlen($error))
-					{
+					if (!strlen($error)) {
 						pihole_execute("-a removestaticdhcp ".$mac);
 						$success .= "The static address with MAC address ".htmlspecialchars($mac)." has been removed";
 					}
 					break;
 				}
-
-				if(isset($_POST["active"]))
-				{
+				if (isset($_POST["active"])) {
 					// Validate from IP
 					$from = $_POST["from"];
-					if (!validIP($from))
-					{
+					if (!validIP($from)) {
 						$error .= "From IP (".htmlspecialchars($from).") is invalid!<br>";
 					}
-
 					// Validate to IP
 					$to = $_POST["to"];
-					if (!validIP($to))
-					{
+					if (!validIP($to)) {
 						$error .= "To IP (".htmlspecialchars($to).") is invalid!<br>";
 					}
-
 					// Validate router IP
 					$router = $_POST["router"];
-					if (!validIP($router))
-					{
+					if (!validIP($router)) {
 						$error .= "Router IP (".htmlspecialchars($router).") is invalid!<br>";
 					}
-
 					$domain = $_POST["domain"];
-
 					// Validate Domain name
-					if(!validDomain($domain))
-					{
+					if (!validDomain($domain)) {
 						$error .= "Domain name ".htmlspecialchars($domain)." is invalid!<br>";
 					}
-
 					$leasetime = $_POST["leasetime"];
-
 					// Validate Lease time length
-					if(!is_numeric($leasetime) || intval($leasetime) < 0)
-					{
+					if (!is_numeric($leasetime) || intval($leasetime) < 0) {
 						$error .= "Lease time ".htmlspecialchars($leasetime)." is invalid!<br>";
 					}
-
-					if(isset($_POST["useIPv6"]))
-					{
+					if (isset($_POST["useIPv6"])) {
 						$ipv6 = "true";
 						$type = "(IPv4 + IPv6)";
-					}
-					else
-					{
+					} else {
 						$ipv6 = "false";
 						$type = "(IPv4)";
 					}
-
-					if(isset($_POST["DHCP_rapid_commit"]))
-					{
+					if (isset($_POST["DHCP_rapid_commit"])) {
 						$rapidcommit = "true";
-					}
-					else
-					{
+					} else {
 						$rapidcommit = "false";
 					}
-
-					if(!strlen($error))
-					{
+					if (!strlen($error)) {
 						pihole_execute("-a enabledhcp ".$from." ".$to." ".$router." ".$leasetime." ".$domain." ".$ipv6." ".$rapidcommit);
 						$success .= "The DHCP server has been activated ".htmlspecialchars($type);
 					}
-				}
-				else
-				{
+				} else {
 					pihole_execute("-a disabledhcp");
 					$success = "The DHCP server has been deactivated";
 				}
@@ -704,8 +562,7 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 
 			case "privacyLevel":
 				$level = intval($_POST["privacylevel"]);
-				if($level >= 0 && $level <= 4)
-				{
+				if ($level >= 0 && $level <= 4) {
 					// Check if privacylevel is already set
 					if (isset($piholeFTLConf["PRIVACYLEVEL"])) {
 						$privacylevel = intval($piholeFTLConf["PRIVACYLEVEL"]);
@@ -716,22 +573,15 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 					// Store privacy level
 					pihole_execute("-a privacylevel ".$level);
 
-					if($privacylevel > $level)
-					{
+					if ($privacylevel > $level) {
 						pihole_execute("-a restartdns");
 						$success .= "The privacy level has been decreased and the DNS resolver has been restarted";
-					}
-					elseif($privacylevel < $level)
-					{
+					} elseif ($privacylevel < $level) {
 						$success .= "The privacy level has been increased";
-					}
-					else
-					{
+					} else {
 						$success .= "The privacy level has not been changed";
 					}
-				}
-				else
-				{
+				} else {
 					$error .= "Invalid privacy level (".$level.")!";
 				}
 				break;
@@ -739,12 +589,10 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 			case "flusharp":
 				$output = pihole_execute("arpflush quiet");
 				$error = "";
-				if(is_array($output))
-				{
+				if (is_array($output)) {
 					$error = implode("<br>", $output);
 				}
-				if(strlen($error) == 0)
-				{
+				if (strlen($error) == 0) {
 					$success .= "The network table has been flushed";
 				}
 				break;
@@ -756,34 +604,22 @@ function addStaticDHCPLease($mac, $ip, $hostname) {
 		}
 	}
 
-	// Credit: http://stackoverflow.com/a/5501447/2087442
-	function formatSizeUnits($bytes)
-	{
-		if ($bytes >= 1073741824)
-		{
-			$bytes = number_format($bytes / 1073741824, 2) . ' GB';
-		}
-		elseif ($bytes >= 1048576)
-		{
-			$bytes = number_format($bytes / 1048576, 2) . ' MB';
-		}
-		elseif ($bytes >= 1024)
-		{
-			$bytes = number_format($bytes / 1024, 2) . ' kB';
-		}
-		elseif ($bytes > 1)
-		{
-			$bytes = $bytes . ' bytes';
-		}
-		elseif ($bytes == 1)
-		{
-			$bytes = $bytes . ' byte';
-		}
-		else
-		{
-			$bytes = '0 bytes';
-		}
-
-		return $bytes;
+// Credit: http://stackoverflow.com/a/5501447/2087442
+function formatSizeUnits($bytes)
+{
+	if ($bytes >= 1073741824) {
+		$bytes = number_format($bytes / 1073741824, 2) . ' GB';
+	} elseif ($bytes >= 1048576) {
+		$bytes = number_format($bytes / 1048576, 2) . ' MB';
+	} elseif ($bytes >= 1024) {
+		$bytes = number_format($bytes / 1024, 2) . ' kB';
+	} elseif ($bytes > 1) {
+		$bytes .= ' bytes';
+	} elseif ($bytes == 1) {
+		$bytes .= ' byte';
+	} else {
+		$bytes = '0 bytes';
 	}
-?>
+
+	return $bytes;
+}
